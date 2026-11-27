@@ -1,0 +1,12 @@
+{
+  "name": "cleanframe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "净帧 CLEANFRAME — 浏览器本地图片元数据清理、批量水印与 ZIP 导出",
+  "scripts": {
+    "start": "node server.mjs --open",
+    "serve": "node server.mjs",
+    "test": "node tests/metadata.test.mjs && node tests/watermark.test.mjs && node tests/rename.test.mjs"
+  }
+}

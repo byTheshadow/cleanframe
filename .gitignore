@@ -1,0 +1,7 @@
+_qa/
+_chrome-*/
+_downloads/
+node_modules/
+*.crdownload
+*.log
+.DS_Store

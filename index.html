@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="净帧是一款完全在浏览器本地运行的照片隐私工具：看清照片里的位置、设备与作者信息，批量清理，添加水印，一键打包下载。"
+    />
+    <meta name="theme-color" content="#f4f1e9" />
+    <title>净帧 CLEANFRAME — 留下画面，带走痕迹</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#workspaceView">跳到图片工作区</a>
+
+    <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /><path d="M12 14v2.5" /></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v11" /><path d="m7.5 10 4.5 4.5 4.5-4.5" /><path d="M4 19.5h16" /></symbol>
+      <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4 12h15" /><path d="m13 6 6 6-6 6" /></symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M20 12H5" /><path d="m11 6-6 6 6 6" /></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" /></symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" /></symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7" /></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 3 8 7 10 4-2 7-5.4 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5h3l1.5-2h7l1.5 2h3v10H4z" /><circle cx="12" cy="13" r="3.5" /></symbol>
+      <symbol id="i-aperture" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m8 4 5 8M20 9h-9M16 20l-4-8M4 15h9M10 4l4 8M20 15l-8-3" /></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" /><circle cx="12" cy="9" r="2.5" /></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" /></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2.5h8l4 4V21H6z" /><path d="M14 2.5V7h4" /><path d="M9 12h6M9 16h4" /></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M12 6v13M8 19h8" /></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" /></symbol>
+      <symbol id="i-tag" viewBox="0 0 24 24"><path d="m3 12 9-9h8v8l-9 9z" /><circle cx="16" cy="8" r="1.5" /></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z" /><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8Z" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 14h9l1-14M10 11v6M14 11v6" /></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3" /><path d="m7 8 5-5 5 5" /><path d="M4 20h16" /></symbol>
+      <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 7h16v13H4zM3 4h18v3H3z" /><path d="M10 11h4v3h-4z" /></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.6" /></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m4 18 5-5 3.5 3.5L16 13l4 4" /></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4Z" /><path d="M12 9v5M12 17.2v.1" /></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5" /><path d="M19 12a7.5 7.5 0 1 0-2 5.5" /></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></symbol>
+      <symbol id="i-spinner" viewBox="0 0 24 24"><path d="M12 2.5a9.5 9.5 0 1 1-9.5 9.5" /></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.5 2.5 0 1 1 3.3 2.4c-.7.3-.9.7-.9 1.5" /><path d="M12 17.2v.1" /></symbol>
+      <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18" /><path d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17.8 17.8 0 0 1-3 3.5" /><path d="M6.2 7.2C3.9 8.8 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8" /><path d="M9.8 9.8a3 3 0 0 0 4.4 4.4" /></symbol>
+      <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m5 15 7-7 7 7" /></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 16 9 5 9-5" /></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" /><path d="m13 6 5 5" /></symbol>
+    </svg>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#" aria-label="净帧 CLEANFRAME">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <rect x="3" y="3" width="34" height="34" rx="11" stroke="currentColor" stroke-width="2.2" />
+              <path d="M10 27.5 20 10l4.2 7.3L29 9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="27.5" cy="27.5" r="4.5" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="brand-type">
+            <strong>净帧</strong>
+            <small>CLEANFRAME</small>
+          </span>
+        </a>
+
+        <div class="privacy-pill" title="图片只在当前浏览器标签页内处理">
+          <span class="privacy-dot"></span>
+          <svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg>
+          <span>文件不上传</span>
+          <span class="privacy-sub">只在浏览器处理</span>
+        </div>
+
+        <div class="topbar-actions">
+          <span class="batch-indicator" id="batchIndicator" hidden></span>
+          <button class="button button-ghost top-add" id="topAddButton" type="button" aria-label="添加照片">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
+            <span>添加照片</span>
+          </button>
+          <button class="button button-dark" id="zipButton" type="button" disabled title="先添加图片" aria-label="打包下载已选图片">
+            <svg class="icon" aria-hidden="true"><use href="#i-archive" /></svg>
+            <span>打包下载</span>
+            <span class="button-count" id="zipCount" hidden>0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="app">
+      <section class="landing" id="landingView" aria-labelledby="heroTitle">
+        <div class="landing-hero">
+          <div class="landing-copy">
+            <p class="eyebrow"><span class="eyebrow-rule"></span> 照片隐私 · 水印 · 批量导出</p>
+            <h1 id="heroTitle">留下画面，<br /><span class="headline-mark">带走痕迹。</span></h1>
+            <p class="lede">
+              照片文件里除了画面，还常常藏着拍摄地点、手机型号、时间和作者信息。净帧先帮你看清楚，再决定删掉什么、加上什么。
+            </p>
+
+            <div class="landing-actions">
+              <button class="button button-primary button-large" type="button" data-open-picker>
+                <svg class="icon" aria-hidden="true"><use href="#i-upload" /></svg>
+                选择照片
+              </button>
+              <button class="button button-quiet button-large" type="button" id="loadDemoButton">
+                <svg class="icon" aria-hidden="true"><use href="#i-spark" /></svg>
+                看看示例
+              </button>
+            </div>
+
+            <ul class="landing-facts" aria-label="产品特点">
+              <li><strong>0</strong><span>图片上传</span></li>
+              <li><strong>3</strong><span>常见格式</span></li>
+              <li><strong>∞</strong><span>可批量处理</span></li>
+            </ul>
+
+            <p class="privacy-note">
+              <svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg>
+              照片只在你的浏览器里处理，不上传服务器。关闭页面，它们就消失。
+            </p>
+          </div>
+
+          <div class="landing-drop-wrap">
+            <section
+              class="drop-card"
+              id="landingDrop"
+              data-dropzone
+              tabindex="0"
+              role="button"
+              aria-label="拖放照片到这里，或按回车选择照片"
+            >
+              <div class="drop-card-top">
+                <span class="mono-label">DROP ZONE</span>
+                <span class="corner-tag">支持批量</span>
+              </div>
+              <div class="drop-visual" aria-hidden="true">
+                <div class="visual-card visual-card-back"></div>
+                <div class="visual-card visual-card-mid"></div>
+                <div class="visual-card visual-card-front">
+                  <div class="visual-sky"></div>
+                  <div class="visual-sun"></div>
+                  <div class="visual-hill visual-hill-a"></div>
+                  <div class="visual-hill visual-hill-b"></div>
+                  <div class="visual-stamp">JPG</div>
+                </div>
+                <div class="visual-badge">
+                  <svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg>
+                </div>
+              </div>
+              <h2>把照片拖到这里</h2>
+              <p>或点击选择，也可以直接按 <kbd>⌘</kbd><span>+</span><kbd>V</kbd> 粘贴</p>
+              <span class="drop-fake-button">浏览本地文件 <svg class="icon" aria-hidden="true"><use href="#i-arrow-right" /></svg></span>
+              <p class="drop-formats">JPG · PNG · WebP &nbsp;/&nbsp; 单次最多 50 张、200 MB</p>
+              <div class="drop-bottom-line">
+                <span><i class="status-dot"></i>只在本地处理</span>
+                <span>无需安装</span>
+              </div>
+            </section>
+            <div class="drop-shadow-note">
+              <span class="mono-label">不会上传</span>
+              <span>照片停留在你的设备上，不会发往任何服务器。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="capabilities" aria-label="功能概览">
+          <article class="capability">
+            <span class="capability-num">01</span>
+            <div>
+              <h3>看看照片里有什么</h3>
+              <p>位置、设备、时间、作者，藏在文件里的信息都能看到。</p>
+            </div>
+          </article>
+          <article class="capability">
+            <span class="capability-num">02</span>
+            <div>
+              <h3>删掉不想公开的内容</h3>
+              <p>批量清掉位置和设备信息，画面本身不变。</p>
+            </div>
+          </article>
+          <article class="capability">
+            <span class="capability-num">03</span>
+            <div>
+              <h3>加上你的水印</h3>
+              <p>内置模板直接用，也能叠加多层，调好再导出。</p>
+            </div>
+          </article>
+          <article class="capability">
+            <span class="capability-num">04</span>
+            <div>
+              <h3>一次下载全部</h3>
+              <p>单张保存，或把勾选的照片装进一个压缩包。</p>
+            </div>
+          </article>
+        </div>
+
+        <footer class="landing-footer">
+          <span>CLEANFRAME © 2026</span>
+          <span class="footer-center">为分享前的最后一步而做</span>
+          <span>无需上传 · 不用注册 · 没有追踪</span>
+        </footer>
+      </section>
+
+      <section class="workspace" id="workspaceView" aria-label="图片处理工作区" hidden>
+        <aside class="library" aria-label="图片库">
+          <div class="library-head">
+            <div>
+              <span class="section-kicker">LIBRARY</span>
+              <h2>图片库 <span class="count-badge" id="libraryCount">0</span></h2>
+            </div>
+            <button class="icon-button" id="libraryAddButton" type="button" aria-label="添加更多照片" title="添加更多照片">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
+            </button>
+          </div>
+
+          <div class="select-bar">
+            <label class="check-control">
+              <input type="checkbox" id="selectAllCheckbox" />
+              <span class="check-box" aria-hidden="true"><svg class="icon"><use href="#i-check" /></svg></span>
+              <span>全选</span>
+            </label>
+            <span class="selection-count" id="selectionCount" aria-live="polite">0 / 0</span>
+            <button class="text-button" id="renameButton" type="button" title="批量修改已选照片的文件名" aria-label="批量修改文件名">
+              <svg class="icon" aria-hidden="true"><use href="#i-edit" /></svg>
+              改名
+            </button>
+            <button class="text-button" id="clearButton" type="button">清空</button>
+          </div>
+
+          <div class="file-list" id="fileList" aria-label="照片列表"></div>
+
+          <button class="library-drop" id="libraryDrop" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
+            拖入更多照片
+          </button>
+          <div class="library-foot">
+            <span>原始文件合计</span>
+            <strong id="libraryTotalSize">0 B</strong>
+          </div>
+        </aside>
+
+        <section class="stage-panel" aria-label="图片预览">
+          <p class="sr-only" id="stageAnnouncer" aria-live="polite"></p>
+          <div class="stage-head">
+            <div class="stage-title">
+              <span class="stage-index" id="stageIndex">01 / 01</span>
+              <div class="stage-name-row">
+                <h2 id="stageName">未选择图片</h2>
+                <span class="status-badge" id="stageBadge">原图</span>
+              </div>
+            </div>
+            <div class="stage-actions">
+              <div class="compare-toggle" id="compareToggle" role="group" aria-label="预览模式" hidden>
+                <button type="button" data-view="original" class="is-active" aria-pressed="true">原图</button>
+                <button type="button" data-view="result" aria-pressed="false">处理后</button>
+              </div>
+              <button class="button button-on-dark button-small" id="downloadCurrentButton" type="button" disabled aria-label="下载当前图片">
+                <svg class="icon" aria-hidden="true"><use href="#i-download" /></svg>
+                <span>下载</span>
+              </button>
+              <div class="stage-nav">
+                <button class="icon-button icon-button-dark" id="prevButton" type="button" aria-label="上一张" disabled>
+                  <svg class="icon" aria-hidden="true"><use href="#i-chevron-left" /></svg>
+                </button>
+                <button class="icon-button icon-button-dark" id="nextButton" type="button" aria-label="下一张" disabled>
+                  <svg class="icon" aria-hidden="true"><use href="#i-chevron-right" /></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="stage-viewport" id="stageViewport">
+            <div class="stage-glow" aria-hidden="true"></div>
+            <div class="media-shell" id="mediaShell">
+              <img id="stageImage" alt="" draggable="false" />
+              <canvas id="watermarkCanvas" aria-hidden="true"></canvas>
+              <span class="preview-tag" id="previewTag" hidden>水印实时预览</span>
+            </div>
+            <div class="stage-privacy" id="stagePrivacy" hidden>
+              <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
+              <span id="stagePrivacyText"></span>
+            </div>
+            <div class="stage-empty" id="stageEmpty" hidden>
+              <svg class="icon" aria-hidden="true"><use href="#i-image" /></svg>
+              <p>从左侧选择一张照片</p>
+            </div>
+          </div>
+
+          <div class="stage-foot">
+            <div class="stage-meta">
+              <span id="footDimensions">—</span>
+              <span class="meta-separator"></span>
+              <span id="footMetaSize">—</span>
+              <span class="meta-separator"></span>
+              <span id="footMetaState">等待导入</span>
+            </div>
+            <div class="stage-foot-actions">
+              <button class="text-button text-button-dark" id="restoreButton" type="button" title="恢复原图" hidden>
+                <svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>
+                恢复原图
+              </button>
+              <button class="text-button text-button-dark" id="removeButton" type="button" title="移出列表" disabled>
+                <svg class="icon" aria-hidden="true"><use href="#i-trash" /></svg>
+                移出列表
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="inspector" aria-label="图片工具">
+          <div class="inspector-tabs" role="tablist" aria-label="图片工具">
+            <button id="tab-metadata" type="button" role="tab" aria-selected="true" aria-controls="panel-metadata" tabindex="0" data-tab="metadata">
+              <svg class="icon" aria-hidden="true"><use href="#i-eye" /></svg>照片信息
+            </button>
+            <button id="tab-clean" type="button" role="tab" aria-selected="false" aria-controls="panel-clean" tabindex="-1" data-tab="clean">
+              <svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg>清理隐私
+            </button>
+            <button id="tab-watermark" type="button" role="tab" aria-selected="false" aria-controls="panel-watermark" tabindex="-1" data-tab="watermark">
+              <svg class="icon" aria-hidden="true"><use href="#i-spark" /></svg>加个水印
+            </button>
+          </div>
+
+          <div class="inspector-scroll">
+            <section class="tab-panel" id="panel-metadata" role="tabpanel" aria-labelledby="tab-metadata">
+              <div class="risk-card" id="riskCard">
+                <div class="risk-card-top">
+                  <span class="risk-icon"><svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg></span>
+                  <div>
+                    <strong>正在看看照片里有什么…</strong>
+                    <p>可能暴露位置、身份或设备的内容会标出来。</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-grid" aria-label="图片摘要">
+                <div class="summary-cell"><span>画面大小</span><strong id="summaryDimensions">—</strong></div>
+                <div class="summary-cell"><span>文件大小</span><strong id="summarySize">—</strong></div>
+                <div class="summary-cell"><span>隐藏信息</span><strong id="summaryMetadata">—</strong></div>
+                <div class="summary-cell"><span>颜色模式</span><strong id="summaryColor">—</strong></div>
+              </div>
+
+              <div class="panel-section-head">
+                <div>
+                  <span class="section-kicker">WHAT'S INSIDE</span>
+                  <h3>照片里的全部信息</h3>
+                </div>
+                <div class="panel-head-actions">
+                  <button class="icon-text-button" type="button" data-open-glossary>
+                    <svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>名词解释
+                  </button>
+                  <button class="icon-text-button" id="copyMetadataButton" type="button">
+                    <svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg>复制全部
+                  </button>
+                </div>
+              </div>
+              <div class="metadata-groups" id="metadataGroups"></div>
+
+              <p class="panel-footnote">
+                <svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg>
+                照片只在当前页面里解析，不会上传。关闭页面后不会保留。
+              </p>
+            </section>
+
+            <section class="tab-panel" id="panel-clean" role="tabpanel" aria-labelledby="tab-clean" hidden>
+              <div class="panel-heading">
+                <span class="section-kicker">REMOVE PRIVATE DETAILS</span>
+                <h2>清掉不想公开的信息</h2>
+                <p>手机和修图软件会在照片文件里写下位置、设备、时间和作者。别人收到原图时，也可能一起收到这些内容。清理后，画面不变，这些附带信息会被删除。</p>
+              </div>
+
+              <div class="clean-overview">
+                <div class="clean-seal"><svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg></div>
+                <div>
+                  <strong id="cleanHeadline">选择照片后开始</strong>
+                  <p id="cleanSubline">会先告诉你要清理多少条信息。</p>
+                </div>
+              </div>
+
+              <ul class="removal-list">
+                <li><span class="removal-check"><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg></span><span><strong>你在哪里拍的</strong><small>GPS 位置、海拔和定位时间</small></span></li>
+                <li><span class="removal-check"><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg></span><span><strong>用什么设备拍的</strong><small>手机或相机型号、镜头、序列号</small></span></li>
+                <li><span class="removal-check"><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg></span><span><strong>你和版权信息</strong><small>作者、版权、关键词和说明</small></span></li>
+                <li><span class="removal-check"><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg></span><span><strong>时间和编辑记录</strong><small>拍摄时间、修改时间和用过的软件</small></span></li>
+              </ul>
+
+              <label class="switch-row" for="keepIccToggle">
+                <span class="switch-copy">
+                  <strong>保留照片的颜色设置</strong>
+                  <small>ICC 是让颜色更准确的配置文件，一般建议保留。</small>
+                </span>
+                <input type="checkbox" id="keepIccToggle" checked />
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+
+              <div class="info-strip">
+                <svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>
+                <span>有旋转信息的照片会先自动转正，不会导出成横的。</span>
+              </div>
+              <button class="text-link-button" type="button" data-open-glossary>
+                <svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>
+                第一次听这些词？看看名词解释
+              </button>
+
+              <div class="panel-action">
+                <button class="button button-accent button-large button-wide" id="applyCleanButton" type="button" disabled>
+                  <svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg>
+                  <span id="applyCleanLabel">清理照片里的隐藏信息</span>
+                </button>
+                <p class="action-caption">原图会留在页面里，随时可以恢复。</p>
+              </div>
+            </section>
+
+            <section class="tab-panel" id="panel-watermark" role="tabpanel" aria-labelledby="tab-watermark" hidden>
+              <div class="panel-heading">
+                <span class="section-kicker">MAKE IT YOURS</span>
+                <h2>加上你的水印</h2>
+                <p>选个模板就能直接用，也可以叠加多层。预览里看到什么，导出就是什么。</p>
+              </div>
+
+              <div class="preset-section">
+                <div class="subhead-row">
+                  <div>
+                    <span class="section-kicker">QUICK START</span>
+                    <h3 id="presetHeading">一键模板</h3>
+                  </div>
+                  <span class="subhead-hint">点一下套用 · 左右滑动</span>
+                </div>
+                <div class="preset-strip" id="presetStrip" role="group" aria-labelledby="presetHeading"></div>
+              </div>
+
+              <div class="layers-section">
+                <div class="subhead-row">
+                  <div>
+                    <span class="section-kicker">LAYERS</span>
+                    <h3 id="layersHeading">水印图层 <span class="count-badge" id="layerCount">1</span></h3>
+                  </div>
+                  <button class="mini-add" id="addLayerButton" type="button">
+                    <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
+                    添加图层
+                  </button>
+                </div>
+                <p class="layers-hint">每一层都像一张透明贴纸；列表越靠上，贴在画面越上层。</p>
+                <div class="layer-list" id="layerList" role="list" aria-label="水印图层列表"></div>
+              </div>
+
+              <div class="layer-editor">
+                <div class="layer-editor-head">
+                  <div>
+                    <span class="section-kicker">EDIT LAYER</span>
+                    <h3>正在编辑 <span id="activeLayerName">文字图层</span></h3>
+                  </div>
+                  <button class="icon-text-button" id="duplicateLayerButton" type="button" title="复制当前图层">
+                    <svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg>
+                    复制
+                  </button>
+                </div>
+
+                <div class="segmented" id="watermarkType" role="group" aria-label="这个图层的内容类型">
+                  <button type="button" data-type="text" class="is-active">文字</button>
+                  <button type="button" data-type="logo">图片 / Logo</button>
+                </div>
+
+                <div id="textWatermarkFields">
+                  <label class="field-label" for="watermarkText">写点什么</label>
+                  <input class="text-input" type="text" id="watermarkText" maxlength="120" value="© 2026 净帧" autocomplete="off" placeholder="例如：© 2026 你的名字" />
+                  <div class="field-row">
+                    <label class="field">
+                      <span>字体</span>
+                      <select class="select-input" id="watermarkFont">
+                        <option value="sans">现代无衬线</option>
+                        <option value="serif">编辑衬线</option>
+                        <option value="mono">等宽标签</option>
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>字重</span>
+                      <select class="select-input" id="watermarkWeight">
+                        <option value="400">常规</option>
+                        <option value="500">中等</option>
+                        <option value="600" selected>半粗</option>
+                        <option value="700">加粗</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="field-row color-field-row">
+                    <div class="field">
+                      <span>颜色</span>
+                      <div class="color-swatches" id="colorSwatches" role="group" aria-label="水印颜色">
+                        <button type="button" data-color="#ffffff" style="--swatch:#ffffff" class="is-active" aria-label="白色"></button>
+                        <button type="button" data-color="#171815" style="--swatch:#171815" aria-label="墨黑"></button>
+                        <button type="button" data-color="#d8ff3e" style="--swatch:#d8ff3e" aria-label="荧光绿"></button>
+                        <button type="button" data-color="#ff5a36" style="--swatch:#ff5a36" aria-label="橙红"></button>
+                      </div>
+                    </div>
+                    <label class="field field-color">
+                      <span>自定义</span>
+                      <input type="color" id="watermarkColor" value="#ffffff" aria-label="自定义水印颜色" />
+                    </label>
+                  </div>
+                </div>
+
+                <div id="logoWatermarkFields" hidden>
+                  <div class="logo-picker-row">
+                    <button class="logo-picker" id="pickLogoButton" type="button">
+                      <svg class="icon" aria-hidden="true"><use href="#i-image" /></svg>
+                      <span>上传这个图层的标识</span>
+                    </button>
+                    <div class="logo-preview" id="logoPreviewWrap" hidden>
+                      <img id="logoPreview" alt="当前图层的水印标识预览" />
+                      <button type="button" class="mini-remove" id="removeLogoButton" aria-label="移除这个图层的水印标识"><svg class="icon"><use href="#i-x" /></svg></button>
+                    </div>
+                  </div>
+                  <p class="field-help">建议使用透明 PNG。上传的标识只对这个图层生效。</p>
+                  <label class="range-field" for="logoScaleRange">
+                    <span>标识大小 <output id="logoScaleOutput">14%</output></span>
+                    <input type="range" id="logoScaleRange" min="3" max="40" step="1" value="14" />
+                  </label>
+                </div>
+
+                <div class="range-grid">
+                  <label class="range-field" for="opacityRange">
+                    <span>不透明度 <output id="opacityOutput">78%</output></span>
+                    <input type="range" id="opacityRange" min="5" max="100" step="1" value="78" />
+                  </label>
+                  <label class="range-field" for="sizeRange" id="sizeRangeField">
+                    <span>大小 <output id="sizeOutput">4.4%</output></span>
+                    <input type="range" id="sizeRange" min="1.5" max="18" step="0.1" value="4.4" />
+                  </label>
+                </div>
+
+                <fieldset class="position-fieldset">
+                  <legend>放在哪里</legend>
+                  <div class="position-grid" id="positionGrid">
+                    <button type="button" data-position="top-left" aria-label="左上"></button>
+                    <button type="button" data-position="top-center" aria-label="上中"></button>
+                    <button type="button" data-position="top-right" aria-label="右上"></button>
+                    <button type="button" data-position="middle-left" aria-label="左中"></button>
+                    <button type="button" data-position="middle-center" aria-label="居中"></button>
+                    <button type="button" data-position="middle-right" aria-label="右中"></button>
+                    <button type="button" data-position="bottom-left" aria-label="左下"></button>
+                    <button type="button" data-position="bottom-center" aria-label="下中"></button>
+                    <button type="button" data-position="bottom-right" aria-label="右下" class="is-active"></button>
+                  </div>
+                </fieldset>
+
+                <div class="switch-stack">
+                  <label class="switch-row compact" for="tileToggle">
+                    <span class="switch-copy"><strong>平铺整张图片</strong><small>适合预览图、样片和防盗图。</small></span>
+                    <input type="checkbox" id="tileToggle" />
+                    <span class="switch-ui" aria-hidden="true"></span>
+                  </label>
+                  <label class="switch-row compact" for="shadowToggle">
+                    <span class="switch-copy"><strong>加一点投影</strong><small>在复杂背景上更容易看清。</small></span>
+                    <input type="checkbox" id="shadowToggle" checked />
+                    <span class="switch-ui" aria-hidden="true"></span>
+                  </label>
+                </div>
+
+                <details class="fine-tune">
+                  <summary>位置微调和导出格式 <svg class="icon" aria-hidden="true"><use href="#i-chevron-down" /></svg></summary>
+                  <div class="fine-tune-body">
+                    <label class="range-field" for="marginRange">
+                      <span>边距 <output id="marginOutput">3.2%</output></span>
+                      <input type="range" id="marginRange" min="0" max="15" step="0.1" value="3.2" />
+                    </label>
+                    <label class="range-field" for="rotationRange">
+                      <span>旋转 <output id="rotationOutput">0°</output></span>
+                      <input type="range" id="rotationRange" min="-45" max="45" step="1" value="0" />
+                    </label>
+                    <label class="field">
+                      <span>水印输出的文件格式</span>
+                      <select class="select-input" id="outputFormat">
+                        <option value="auto">自动（跟随原图）</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="png">PNG</option>
+                        <option value="webp">WebP</option>
+                      </select>
+                    </label>
+                    <label class="range-field" for="qualityRange" id="qualityField">
+                      <span>导出质量 <output id="qualityOutput">92%</output></span>
+                      <input type="range" id="qualityRange" min="60" max="100" step="1" value="92" />
+                    </label>
+                  </div>
+                </details>
+
+                <div class="panel-action">
+                  <button class="button button-accent button-large button-wide" id="applyWatermarkButton" type="button" disabled>
+                    <svg class="icon" aria-hidden="true"><use href="#i-spark" /></svg>
+                    <span id="applyWatermarkLabel">添加水印</span>
+                  </button>
+                  <p class="action-caption">导出时会自动去掉照片里的隐藏信息。</p>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <div class="drop-overlay" id="dropOverlay" hidden>
+      <div class="drop-overlay-inner">
+        <div class="drop-overlay-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload" /></svg></div>
+        <strong>松手，交给净帧</strong>
+        <span>JPG · PNG · WebP</span>
+      </div>
+    </div>
+
+    <div class="job-toast" id="jobToast" hidden role="status" aria-live="polite">
+      <div class="job-copy">
+        <strong id="jobLabel">正在处理</strong>
+        <span id="jobDetail">0 / 0</span>
+      </div>
+      <div class="job-progress" aria-hidden="true"><span id="jobBar"></span></div>
+      <button class="job-cancel" id="jobCancelButton" type="button">取消</button>
+    </div>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="false"></div>
+
+    <dialog class="rename-dialog" id="renameDialog" aria-labelledby="renameTitle">
+      <div class="rename-dialog-head">
+        <div>
+          <span class="section-kicker">BATCH RENAME</span>
+          <h2 id="renameTitle">统一修改文件名</h2>
+          <p id="renameScope">已选 0 张照片</p>
+        </div>
+        <button class="icon-button" id="closeRenameButton" type="button" aria-label="关闭批量改名">
+          <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+        </button>
+      </div>
+      <div class="rename-dialog-body">
+        <p class="rename-intro">
+          <svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>
+          <span>这里只会修改净帧里显示的名称和导出文件名，<strong>不会改动你电脑上的原文件</strong>。</span>
+        </p>
+
+        <label class="field-label" for="renameBase">新名称（可选）</label>
+        <div class="rename-base-row">
+          <input class="text-input" type="text" id="renameBase" maxlength="80" autocomplete="off" placeholder="不填则保留原来的文件名" />
+          <button class="inline-action" id="renameUseDateButton" type="button">用今天日期</button>
+        </div>
+        <p class="field-help">扩展名会自动保留。下面还可以加前缀、后缀和自动编号。</p>
+
+        <div class="field-row">
+          <label class="field">
+            <span>前缀（可选）</span>
+            <input class="text-input" type="text" id="renamePrefix" maxlength="30" autocomplete="off" placeholder="例如：精选-" />
+          </label>
+          <label class="field">
+            <span>后缀（可选）</span>
+            <input class="text-input" type="text" id="renameSuffix" maxlength="30" autocomplete="off" placeholder="例如：-已处理" />
+          </label>
+        </div>
+
+        <label class="switch-row rename-number-switch" for="renameNumbering">
+          <span class="switch-copy">
+            <strong>自动编号</strong>
+            <small>多张照片用同一个名称时，需要编号避免重名。</small>
+          </span>
+          <input type="checkbox" id="renameNumbering" checked />
+          <span class="switch-ui" aria-hidden="true"></span>
+        </label>
+
+        <div class="rename-number-row" id="renameNumberOptions">
+          <label class="field">
+            <span>从第几张开始</span>
+            <input class="text-input" type="number" id="renameStart" min="0" max="99999" step="1" value="1" />
+          </label>
+          <label class="field">
+            <span>编号位数</span>
+            <select class="select-input" id="renameDigits">
+              <option value="1">1 位</option>
+              <option value="2" selected>2 位</option>
+              <option value="3">3 位</option>
+              <option value="4">4 位</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>分隔符</span>
+            <input class="text-input" type="text" id="renameSeparator" maxlength="3" value="-" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="rename-preview-box">
+          <div class="rename-preview-head">
+            <span>名称预览</span>
+            <span id="renamePreviewCount">—</span>
+          </div>
+          <ol class="rename-preview-list" id="renamePreview"></ol>
+          <p class="rename-warning" id="renameWarning" role="alert" hidden></p>
+        </div>
+      </div>
+      <div class="rename-actions">
+        <button class="button button-ghost" id="cancelRenameButton" type="button">取消</button>
+        <button class="button button-accent" id="applyRenameButton" type="button" disabled>应用新名称</button>
+      </div>
+    </dialog>
+    <dialog class="glossary-dialog" id="glossaryDialog" aria-labelledby="glossaryTitle">
+      <div class="glossary-dialog-head">
+        <div>
+          <span class="section-kicker">PLAIN WORDS</span>
+          <h2 id="glossaryTitle">这些词是什么意思？</h2>
+        </div>
+        <button class="icon-button" id="closeGlossaryButton" type="button" aria-label="关闭名词解释">
+          <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+        </button>
+      </div>
+      <p class="glossary-lede">不用记住这些名字。你只需要知道：照片文件里，除了画面，还可能有文字说明。</p>
+      <div class="glossary-grid">
+        <article>
+          <span class="glossary-term">元数据</span>
+          <h3>照片自带的隐藏备注</h3>
+          <p>它跟着文件一起走，通常看不见。可能写着拍摄地点、时间、设备和作者。</p>
+        </article>
+        <article>
+          <span class="glossary-term">EXIF</span>
+          <h3>相机或手机写的拍摄记录</h3>
+          <p>包括型号、镜头、快门、光圈、感光度和旋转方向。有些还会写入机身序列号。</p>
+        </article>
+        <article>
+          <span class="glossary-term">GPS</span>
+          <h3>照片的拍摄位置</h3>
+          <p>经纬度可以精确到一条街。发原图时，位置也可能一起被发出去。</p>
+        </article>
+        <article>
+          <span class="glossary-term">XMP / IPTC</span>
+          <h3>软件写入的说明和版权</h3>
+          <p>作者、版权、关键词、标题、城市等。修图软件和新闻机构常用。</p>
+        </article>
+        <article>
+          <span class="glossary-term">ICC</span>
+          <h3>让颜色更准确的颜色说明</h3>
+          <p>它不是隐私内容，却能影响照片在不同屏幕上的颜色。一般建议保留。</p>
+        </article>
+        <article>
+          <span class="glossary-term">缩略图</span>
+          <h3>文件里夹带的小预览图</h3>
+          <p>有些照片会把一张小图藏在文件里。清理元数据时也会一并去掉。</p>
+        </article>
+      </div>
+      <div class="glossary-footer">
+        <p>清理时，净帧会处理常见项，并保留照片的画面和颜色设置。</p>
+        <button class="button button-dark" id="glossaryDoneButton" type="button">知道了</button>
+      </div>
+    </dialog>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple hidden aria-label="选择照片文件" />
+    <input type="file" id="logoInput" accept="image/png,image/webp,image/svg+xml" hidden aria-label="选择水印标识文件" />
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
