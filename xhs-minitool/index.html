@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>净帧 · 发之前先看一眼</title>
+    <link rel="stylesheet" href="./assets/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-top">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">净</span>
+          <span class="brand-copy">
+            <strong>净帧</strong>
+            <small>清理隐私 · 统一水印 · 3:4 发布</small>
+          </span>
+        </div>
+        <span class="bridge-pill" id="bridgePill">浏览器预览</span>
+      </header>
+
+      <main class="app-main">
+        <section class="hero">
+          <p class="eyebrow">BEFORE YOU POST</p>
+          <h1>发之前，先看一眼。</h1>
+          <p class="hero-copy">
+            照片里可能带着拍摄地、设备和时间。选图后先看清楚要送走什么，再一键清理成 3:4 发布图。
+            全程在本机处理，不上传。
+          </p>
+        </section>
+
+        <section class="picker-section">
+          <label class="file-picker" for="fileInput">
+            <span class="picker-icon" aria-hidden="true">＋</span>
+            <span class="picker-title">选择 1–18 张照片</span>
+            <span class="picker-hint">JPG / PNG / WebP，照片不会离开本机</span>
+          </label>
+          <input class="sr-only" id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        </section>
+
+        <section class="selection-section">
+          <div class="section-title">
+            <h2>已选照片</h2>
+            <span id="selectionCount">0 / 18</span>
+          </div>
+          <div class="preview-grid" id="previewGrid"></div>
+          <p class="empty-hint" id="emptyHint">还没有选择照片。先加几张试试。</p>
+        </section>
+
+        <section class="stage-card" id="stageCard">
+          <div class="section-title">
+            <h2>3:4 预览</h2>
+            <span class="stage-badge" id="stageBadge">等待选择</span>
+          </div>
+          <div class="stage-frame">
+            <canvas id="previewCanvas" width="540" height="720" aria-label="3:4 发布预览画面"></canvas>
+          </div>
+          <div class="tab-row" role="tablist" aria-label="预览模式">
+            <button type="button" id="tabOriginal" class="tab-button is-active" role="tab">原图</button>
+            <button type="button" id="tabClean" class="tab-button" role="tab" disabled>已清理</button>
+          </div>
+          <div class="stage-meta">
+            <button id="prevButton" type="button" class="ghost-button" disabled>上一张</button>
+            <span id="stageCaption" class="stage-caption">--</span>
+            <button id="nextButton" type="button" class="ghost-button" disabled>下一张</button>
+          </div>
+        </section>
+
+        <section class="watermark-card" id="watermarkCard" hidden>
+          <div class="section-title">
+            <h2>水印模板</h2>
+            <span class="watermark-badge" id="watermarkBadge">未填写</span>
+          </div>
+          <div class="chip-row" id="templateChips" role="group" aria-label="水印模板"></div>
+
+          <div class="field" id="primaryField">
+            <label for="primaryInput">主文字</label>
+            <input id="primaryInput" type="text" maxlength="28" autocomplete="off" spellcheck="false" placeholder="@你的小红书号" />
+          </div>
+          <div class="field" id="secondaryField" hidden>
+            <label for="secondaryInput">副文字</label>
+            <input id="secondaryInput" type="text" maxlength="28" autocomplete="off" spellcheck="false" placeholder="日期或地点" />
+          </div>
+          <div class="field" id="positionField">
+            <span class="field-label" id="positionLabel">位置</span>
+            <div class="chip-row is-compact" id="positionChips" role="group" aria-labelledby="positionLabel"></div>
+          </div>
+          <div class="field" id="colorField">
+            <span class="field-label" id="colorLabel">颜色</span>
+            <div class="chip-row is-compact" id="colorChips" role="group" aria-labelledby="colorLabel"></div>
+          </div>
+        </section>
+
+        <section class="privacy-card" id="privacyCard" hidden>
+          <div class="section-title">
+            <h2>隐私检查</h2>
+            <span class="privacy-badge" id="privacyBadge">--</span>
+          </div>
+          <p class="privacy-summary" id="privacySummary"></p>
+          <ul class="privacy-list is-clamped" id="privacyList"></ul>
+          <button class="link-button" id="privacyToggle" type="button" aria-expanded="false">展开全部字段</button>
+        </section>
+
+        <section class="action-card">
+          <button id="cleanButton" class="primary-button" type="button" disabled>一键清理并生成 3:4 图</button>
+          <div class="progress" id="progressWrap" hidden>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-row">
+              <span id="progressText">--</span>
+              <button id="cancelButton" type="button" class="ghost-button" hidden>取消</button>
+            </div>
+          </div>
+          <p class="action-note" id="actionNote"></p>
+        </section>
+
+        <details class="compat-card">
+          <summary><span class="tag">DEV</span> 容器自检</summary>
+          <ul class="compat-list" id="compatList"></ul>
+          <p class="compat-note">
+            浏览器里只能预览。保存相册和去发布需要在小工具容器中运行，按钮会提示缺少的能力。
+          </p>
+        </details>
+      </main>
+
+      <nav class="bottom-actions" aria-label="导出操作">
+        <button id="saveButton" type="button" disabled>保存到相册</button>
+        <button id="publishButton" type="button" disabled>去发布</button>
+      </nav>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="./assets/exif.js"></script>
+    <script src="./assets/render.js"></script>
+    <script src="./assets/watermark.js"></script>
+    <script src="./assets/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,3 @@
+﻿# Build output and dev screenshots stay out of the repo.
+dist/
+dev/out/
