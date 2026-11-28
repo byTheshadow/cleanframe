@@ -29,9 +29,8 @@
     seq: 0,
     // Watermark starts on the most likely template but with empty text, so a
     // first-time user never publishes a mark they did not type themselves.
-    watermark: Watermark
-      ? Watermark.normalize({ template: 'handle', primary: '', secondary: '2026.11.27' })
-      : null,
+    watermark: Watermark ? Watermark.defaultState() : null,
+    watermarkCustom: false,
     watermarkVersion: 0,
     refreshTimer: null,
   };
@@ -60,13 +59,9 @@
     'watermarkCard',
     'watermarkBadge',
     'templateChips',
-    'primaryField',
-    'primaryInput',
-    'secondaryField',
-    'secondaryInput',
-    'positionField',
-    'positionChips',
-    'colorField',
+    'layerList',
+    'layerHint',
+    'addLayerButton',
     'colorChips',
     'cleanButton',
     'progressWrap',
@@ -171,18 +166,16 @@
 
   /**
    * Watermark editing is not queued while busy: a deferred edit would silently
-   * diverge from the rendered output. Disable the controls instead so the user
-   * cannot type into a field that would be dropped.
+   * diverge from the rendered output. Disable every control in the panel instead
+   * so the user cannot type into a field that would be dropped.
    */
   function setWatermarkControlsDisabled(disabled) {
-    if (!els.primaryInput) return;
-    els.primaryInput.disabled = disabled;
-    els.secondaryInput.disabled = disabled;
-    var rows = [els.templateChips, els.positionChips, els.colorChips];
-    for (var i = 0; i < rows.length; i += 1) {
-      if (!rows[i]) continue;
-      var buttons = rows[i].getElementsByTagName('button');
-      for (var j = 0; j < buttons.length; j += 1) buttons[j].disabled = disabled;
+    if (!els.watermarkCard) return;
+    var nodes = els.watermarkCard.querySelectorAll('input, button');
+    var atLimit = state.watermark && state.watermark.layers.length >= Watermark.MAX_LAYERS;
+    for (var i = 0; i < nodes.length; i += 1) {
+      var node = nodes[i];
+      node.disabled = disabled || (node === els.addLayerButton && atLimit);
     }
   }
 
@@ -631,23 +624,15 @@
     }
   }
 
-  function isPlaceholderText(config) {
-    var template = Watermark.findTemplate(config.template);
-    var defaults = template.defaults || {};
-    if (!config.primary) return false;
-    if (config.primary === defaults.primary) return true;
-    return config.secondary === defaults.secondary && config.primary === defaults.primary;
-  }
-
   function updateWatermarkBadge() {
     if (!els.watermarkBadge || !Watermark) return;
-    var config = state.watermark;
+    var config = Watermark.normalize(state.watermark);
     var text = '不加水印';
     var tone = 'muted';
-    if (config.template !== 'none') {
-      if (!config.primary) {
+    if (config.layers.length) {
+      if (Watermark.isEmpty(config)) {
         text = '未填写';
-      } else if (isPlaceholderText(config)) {
+      } else if (!state.watermarkCustom && Watermark.isPlaceholder(config)) {
         text = '示例文字';
         tone = 'warn';
       } else {
@@ -662,57 +647,34 @@
   function renderWatermarkPanel() {
     if (!els.watermarkCard || !Watermark) return;
     els.watermarkCard.hidden = state.items.length === 0;
-    var config = state.watermark;
-    var template = Watermark.findTemplate(config.template);
+    var config = Watermark.normalize(state.watermark);
 
     buildChips(
       els.templateChips,
       Watermark.TEMPLATES.map(function (item) {
         return { value: item.id, label: item.name };
       }),
-      config.template,
+      state.watermarkCustom ? '__custom' : config.template,
       chooseTemplate
     );
 
-    var hasPrimary = template.fields.indexOf('primary') !== -1;
-    var hasSecondary = template.fields.indexOf('secondary') !== -1;
-    els.primaryField.hidden = !hasPrimary;
-    els.secondaryField.hidden = !hasSecondary;
-    els.positionField.hidden = !hasPrimary;
-    els.colorField.hidden = !hasPrimary;
+    renderLayerList(config);
 
-    if (document.activeElement !== els.primaryInput) els.primaryInput.value = config.primary;
-    if (document.activeElement !== els.secondaryInput) els.secondaryInput.value = config.secondary;
-
-    buildChips(
-      els.positionChips,
-      Watermark.CORNERS.map(function (corner) {
-        return { value: corner, label: POSITION_LABELS[corner] };
-      }),
-      config.position,
-      function (value) {
-        if (state.busy) return;
-        state.watermark = Watermark.normalize({
-          template: state.watermark.template,
-          primary: state.watermark.primary,
-          secondary: state.watermark.secondary,
-          position: value,
-          color: state.watermark.color,
-        });
-        renderWatermarkPanel();
-        scheduleWatermarkUpdate();
-      }
-    );
+    els.layerHint.hidden = config.layers.length > 0;
+    els.addLayerButton.textContent =
+      config.layers.length >= Watermark.MAX_LAYERS
+        ? '已达上限（' + Watermark.MAX_LAYERS + ' 层）'
+        : '＋ 加一层';
+    els.addLayerButton.disabled = state.busy || config.layers.length >= Watermark.MAX_LAYERS;
 
     buildChips(els.colorChips, COLOR_OPTIONS, config.color, function (value) {
       if (state.busy) return;
       state.watermark = Watermark.normalize({
         template: state.watermark.template,
-        primary: state.watermark.primary,
-        secondary: state.watermark.secondary,
-        position: state.watermark.position,
         color: value,
+        layers: state.watermark.layers,
       });
+      state.watermarkCustom = true;
       renderWatermarkPanel();
       scheduleWatermarkUpdate();
     });
@@ -720,25 +682,164 @@
     updateWatermarkBadge();
   }
 
+  function renderLayerList(config) {
+    if (!els.layerList) return;
+    els.layerList.innerHTML = '';
+    for (var i = 0; i < config.layers.length; i += 1) {
+      els.layerList.appendChild(buildLayerCard(config.layers[i], i, config.layers.length));
+    }
+  }
+
+  function smallChipRow(options, activeValue, onPick) {
+    var row = document.createElement('div');
+    row.className = 'chip-row is-compact';
+    buildChips(row, options, activeValue, onPick);
+    return row;
+  }
+
+  function buildLayerCard(layer, index, total) {
+    var card = document.createElement('div');
+    card.className = 'layer-card';
+    card.setAttribute('data-layer', layer.id);
+
+    var head = document.createElement('div');
+    head.className = 'layer-head';
+    var title = document.createElement('span');
+    title.className = 'layer-title';
+    title.textContent = '图层 ' + (index + 1);
+    head.appendChild(title);
+    var remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'layer-remove';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', '删除图层 ' + (index + 1));
+    remove.addEventListener('click', function () {
+      removeLayer(index);
+    });
+    head.appendChild(remove);
+    card.appendChild(head);
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'layer-text';
+    input.maxLength = 28;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.placeholder = index === 0 ? '@你的小红书号' : '文字或日期';
+    input.value = layer.text;
+    input.setAttribute('aria-label', '图层 ' + (index + 1) + ' 文字');
+    input.addEventListener('input', function () {
+      if (state.busy) return;
+      state.watermark.layers[index].text = input.value;
+      state.watermarkCustom = true;
+      updateWatermarkBadge();
+      scheduleWatermarkUpdate();
+    });
+    card.appendChild(input);
+
+    var row = document.createElement('div');
+    row.className = 'layer-row';
+
+    row.appendChild(
+      smallChipRow(
+        Watermark.SIZE_STEPS.map(function (step) {
+          return { value: String(step.value), label: step.label };
+        }),
+        String(layer.size),
+        function (value) {
+          if (state.busy) return;
+          updateLayer(index, { size: Number(value) });
+          renderWatermarkPanel();
+          scheduleWatermarkUpdate();
+        }
+      )
+    );
+
+    var tileButton = document.createElement('button');
+    tileButton.type = 'button';
+    tileButton.className = 'chip' + (layer.tile ? ' is-active' : '');
+    tileButton.textContent = '平铺';
+    tileButton.setAttribute('aria-pressed', layer.tile ? 'true' : 'false');
+    tileButton.addEventListener('click', function () {
+      if (state.busy) return;
+      updateLayer(index, { tile: !layer.tile });
+      renderWatermarkPanel();
+      scheduleWatermarkUpdate();
+    });
+    var tileWrap = document.createElement('div');
+    tileWrap.className = 'chip-row is-compact';
+    tileWrap.appendChild(tileButton);
+    row.appendChild(tileWrap);
+    card.appendChild(row);
+
+    if (!layer.tile) {
+      card.appendChild(
+        smallChipRow(
+          Watermark.CORNERS.map(function (corner) {
+            return { value: corner, label: POSITION_LABELS[corner] };
+          }),
+          layer.position,
+          function (value) {
+            if (state.busy) return;
+            updateLayer(index, { position: value });
+            renderWatermarkPanel();
+            scheduleWatermarkUpdate();
+          }
+        )
+      );
+    }
+
+    void total;
+    return card;
+  }
+
+  function updateLayer(index, patch) {
+    var current = state.watermark;
+    var layers = [];
+    for (var i = 0; i < current.layers.length; i += 1) {
+      var source = current.layers[i];
+      var next = { id: source.id, text: source.text, font: source.font, weight: source.weight, size: source.size, opacity: source.opacity, position: source.position, tile: source.tile };
+      if (i === index) {
+        for (var key in patch) {
+          if (Object.prototype.hasOwnProperty.call(patch, key)) next[key] = patch[key];
+        }
+      }
+      layers.push(next);
+    }
+    state.watermark = Watermark.normalize({ template: current.template, color: current.color, layers: layers });
+    state.watermarkCustom = true;
+  }
+
+  function removeLayer(index) {
+    if (state.busy) return;
+    var current = state.watermark;
+    var layers = [];
+    for (var i = 0; i < current.layers.length; i += 1) {
+      if (i !== index) layers.push(current.layers[i]);
+    }
+    state.watermark = Watermark.normalize({ template: current.template, color: current.color, layers: layers });
+    state.watermarkCustom = true;
+    renderWatermarkPanel();
+    scheduleWatermarkUpdate();
+  }
+
+  function addLayer() {
+    if (state.busy) return;
+    var current = state.watermark;
+    if (current.layers.length >= Watermark.MAX_LAYERS) return;
+    var layers = current.layers.slice();
+    layers.push(Watermark.emptyLayer());
+    state.watermark = Watermark.normalize({ template: current.template, color: current.color, layers: layers });
+    state.watermarkCustom = true;
+    renderWatermarkPanel();
+    var inputs = els.layerList.getElementsByTagName('input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+
   function chooseTemplate(id) {
     if (state.busy) return;
-    var template = Watermark.findTemplate(id);
-    var defaults = template.defaults || {};
-    var current = state.watermark;
-    var primary = current.primary;
-    var secondary = current.secondary;
-    // Seed placeholder text so a new template is visible immediately; the badge
-    // and the input placeholder both call it out as example copy.
-    if (template.fields.indexOf('primary') !== -1 && !primary && defaults.primary) primary = defaults.primary;
-    if (template.fields.indexOf('secondary') !== -1 && !secondary && defaults.secondary) secondary = defaults.secondary;
-    var position = (template.layers[0] && template.layers[0].position) || current.position;
-    state.watermark = Watermark.normalize({
-      template: id,
-      primary: primary,
-      secondary: secondary,
-      position: position,
-      color: current.color,
-    });
+    state.watermark = Watermark.stateFromTemplate(id);
+    state.watermarkCustom = false;
     renderWatermarkPanel();
     scheduleWatermarkUpdate();
   }
@@ -1150,21 +1251,7 @@
       state.expanded = !state.expanded;
       renderPrivacy();
     });
-    els.primaryInput.addEventListener('input', onWatermarkText);
-    els.secondaryInput.addEventListener('input', onWatermarkText);
-  }
-
-  function onWatermarkText() {
-    if (state.busy) return;
-    state.watermark = Watermark.normalize({
-      template: state.watermark.template,
-      primary: els.primaryInput.value,
-      secondary: els.secondaryInput.value,
-      position: state.watermark.position,
-      color: state.watermark.color,
-    });
-    updateWatermarkBadge();
-    scheduleWatermarkUpdate();
+    els.addLayerButton.addEventListener('click', addLayer);
   }
 
   function init() {
@@ -1218,6 +1305,7 @@
         current: state.current,
         busy: state.busy,
         watermark: state.watermark,
+        watermarkCustom: state.watermarkCustom,
         watermarkVersion: state.watermarkVersion,
       };
     },

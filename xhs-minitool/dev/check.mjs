@@ -235,75 +235,10 @@ check('every orientation matrix is accepted by a drawing context', () => {
 
 // ------------------------------------------------------------- watermark
 
-check('template list covers the MVP set', () => {
-  const ids = Watermark.TEMPLATES.map((template) => template.id);
-  for (const required of ['none', 'handle', 'minimal', 'travel', 'shop']) {
-    assert(ids.indexOf(required) !== -1, `missing template ${required}`);
-  }
-});
-
-check('normalize rejects unknown position and colour', () => {
-  const config = Watermark.normalize({ template: 'handle', primary: 'x', position: 'middle-center', color: 'lime' });
-  assertEqual(config.position, 'bottom-right', 'position fallback');
-  assertEqual(config.color, 'auto', 'colour fallback');
-  assertEqual(config.enabled, true, 'enabled');
-});
-
-check('empty text produces no layer', () => {
-  const config = Watermark.normalize({ template: 'handle', primary: '   ' });
-  assertEqual(Watermark.buildLayers(config).length, 0, 'blank primary should not draw');
-});
-
-check('the none template draws nothing', () => {
-  const config = Watermark.normalize({ template: 'none', primary: 'anything' });
-  assertEqual(config.enabled, false, 'enabled');
-  assertEqual(Watermark.buildLayers(config).length, 0, 'layers');
-});
-
-check('primary follows the chosen corner, secondary keeps its own', () => {
-  const config = Watermark.normalize({
-    template: 'travel',
-    primary: '上海 · 外滩',
-    secondary: '2026.11.27',
-    position: 'top-left',
-  });
-  const layers = Watermark.buildLayers(config);
-  assertEqual(layers.length, 2, 'layer count');
-  assertEqual(layers[0].position, 'top-left', 'primary follows the user');
-  assertEqual(layers[1].position, 'bottom-right', 'secondary stays put');
-  assertEqual(layers[1].text, '2026.11.27', 'secondary text');
-});
-
-check('text is clamped and whitespace collapsed', () => {
-  const long = 'x'.repeat(60);
-  const config = Watermark.normalize({ template: 'handle', primary: `  a   b  ${long}` });
-  assert(config.primary.length <= 28, `length was ${config.primary.length}`);
-  const layers = Watermark.buildLayers(config);
-  assertEqual(layers[0].text, config.primary.replace(/\s+/g, ' ').replace(/^ | $/g, ''), 'collapsed');
-});
-
-check('every template builds drawable layers with text', () => {
-  for (const template of Watermark.TEMPLATES) {
-    if (template.id === 'none') continue;
-    const config = Watermark.normalize({
-      template: template.id,
-      primary: '主文字',
-      secondary: '副文字',
-    });
-    const layers = Watermark.buildLayers(config);
-    assertEqual(layers.length, template.layers.length, `${template.id} layer count`);
-    for (const layer of layers) {
-      assert(layer.size > 0 && layer.size < 20, `${template.id} size`);
-      assert(layer.opacity > 0 && layer.opacity <= 1, `${template.id} opacity`);
-      assert(layer.font.indexOf('sans') !== -1 || layer.font.indexOf('mono') !== -1, `${template.id} font`);
-    }
-  }
-});
-
-check('watermark drawing is safe on an unreadable canvas', () => {
-  // Mimics a tainted canvas: getImageData throws.
+function fakeContext(options = {}) {
   const calls = [];
-  const context = {
+  const fills = [];
+  const ctx = {
     font: '',
     textAlign: '',
     textBaseline: '',
@@ -313,62 +248,171 @@ check('watermark drawing is safe on an unreadable canvas', () => {
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
+    letterSpacing: '0px',
     measureText: (text) => ({ width: text.length * 10 }),
     save: () => {},
     restore: () => {},
-    fillText: (text) => calls.push(text),
-    getImageData: () => {
-      throw new Error('SecurityError');
+    translate: () => {},
+    rotate: () => {},
+    fillText: (text) => {
+      calls.push(text);
+      fills.push(ctx.fillStyle);
     },
+    getImageData: (x, y, w, h) => ({
+      data: new Uint8Array(w * h * 4).fill(options.luminance === undefined ? 12 : options.luminance),
+    }),
   };
-  const painted = Watermark.draw(context, 1080, 1440, { template: 'handle', primary: '@净帧' });
+  if (options.throwOnRead) {
+    ctx.getImageData = () => {
+      throw new Error('SecurityError');
+    };
+  }
+  return { ctx, calls, fills };
+}
+
+check('template list covers the required presets', () => {
+  const ids = Watermark.TEMPLATES.map((template) => template.id);
+  for (const required of ['none', 'handle', 'minimal', 'travel', 'shop', 'guard']) {
+    assert(ids.indexOf(required) !== -1, `missing template ${required}`);
+  }
+  const guard = Watermark.TEMPLATES.find((template) => template.id === 'guard');
+  assert(guard.layers[0].tile === true, 'guard template must be tiled');
+});
+
+check('normalize clamps colour, position, size and layer count', () => {
+  const layers = [];
+  for (let i = 0; i < 6; i += 1) {
+    layers.push({ text: 'l' + i, position: 'middle-center', size: 9.9 });
+  }
+  const config = Watermark.normalize({ template: 'handle', color: 'lime', layers });
+  assertEqual(config.color, 'auto', 'colour fallback');
+  assertEqual(config.layers.length, Watermark.MAX_LAYERS, 'layer cap');
+  assertEqual(config.layers[0].position, 'bottom-right', 'position fallback');
+  const steps = Watermark.SIZE_STEPS.map((step) => step.value);
+  assert(steps.indexOf(config.layers[0].size) !== -1, `size ${config.layers[0].size} is not a step`);
+});
+
+check('text is trimmed, collapsed and clamped to 28 characters', () => {
+  const config = Watermark.normalize({
+    template: 'handle',
+    layers: [{ text: '  a   b  ' + 'x'.repeat(60) }],
+  });
+  assert(config.layers[0].text.length <= 28, `length was ${config.layers[0].text.length}`);
+  assertEqual(config.layers[0].text.indexOf('a b'), 0, 'collapsed');
+});
+
+check('layer ids survive normalisation', () => {
+  const config = Watermark.normalize({ template: 'handle', layers: [{ id: 'keep-me', text: 'x' }] });
+  assertEqual(config.layers[0].id, 'keep-me', 'id preserved');
+  const fresh = Watermark.normalize({ template: 'handle', layers: [{ text: 'x' }] });
+  assert(fresh.layers[0].id && fresh.layers[0].id !== 'keep-me', 'id generated');
+});
+
+check('the none template has no layers and draws nothing', () => {
+  const config = Watermark.stateFromTemplate('none');
+  assertEqual(config.layers.length, 0, 'layers');
+  const { ctx, calls } = fakeContext();
+  assertEqual(Watermark.draw(ctx, 1080, 1440, config), 0, 'painted');
+  assertEqual(calls.length, 0, 'no fillText');
+});
+
+check('empty text layers are kept in state but not painted', () => {
+  const config = Watermark.normalize({ template: 'handle', layers: [{ text: '   ' }, { text: '可见' }] });
+  assertEqual(config.layers.length, 2, 'state keeps both layers');
+  const { ctx, calls } = fakeContext();
+  assertEqual(Watermark.draw(ctx, 1080, 1440, config), 1, 'only one painted');
+  assertEqual(calls[0], '可见', 'painted text');
+});
+
+check('a tiled layer repeats across the frame', () => {
+  const config = Watermark.stateFromTemplate('guard');
+  config.layers[0].text = 'PREVIEW';
+  const { ctx, calls } = fakeContext();
+  const painted = Watermark.draw(ctx, 1080, 1440, config);
   assertEqual(painted, 1, 'one layer');
-  assertEqual(calls.length, 1, 'text still drawn');
-  assertEqual(calls[0], '@净帧', 'text content');
+  assert(calls.length > 20, `expected many repeats, got ${calls.length}`);
+  assertEqual(calls[0], 'PREVIEW', 'text content');
+});
+
+check('tile spacing follows the measured text width', () => {
+  const short = Watermark.stateFromTemplate('guard');
+  short.layers[0].text = 'A';
+  const long = Watermark.stateFromTemplate('guard');
+  long.layers[0].text = 'A'.repeat(21);
+
+  const shortCtx = fakeContext();
+  const longCtx = fakeContext();
+  Watermark.draw(shortCtx.ctx, 1080, 1440, short);
+  Watermark.draw(longCtx.ctx, 1080, 1440, long);
+
+  // The fake context measures 10px per character, so the long string needs a
+  // wider column step and must therefore paint fewer repeats.
+  assert(
+    longCtx.calls.length < shortCtx.calls.length,
+    `long text repeats ${longCtx.calls.length}, short text repeats ${shortCtx.calls.length}`
+  );
+  assert(longCtx.calls.length > 4, `long text repeats only ${longCtx.calls.length}`);
+});
+
+check('a corner layer paints exactly once', () => {
+  const config = Watermark.normalize({ template: 'handle', layers: [{ text: '@a', position: 'top-left' }] });
+  const { ctx, calls } = fakeContext();
+  Watermark.draw(ctx, 1080, 1440, config);
+  assertEqual(calls.length, 1, 'single paint');
+});
+
+check('three layers each paint once (multi-layer)', () => {
+  const config = Watermark.normalize({
+    template: 'handle',
+    layers: [
+      { text: '品牌', position: 'top-left', size: 4.6 },
+      { text: '@账号', position: 'bottom-right', size: 3.2 },
+      { text: '2026.11', position: 'bottom-left', size: 2.2 },
+    ],
+  });
+  const { ctx, calls } = fakeContext();
+  assertEqual(Watermark.draw(ctx, 1080, 1440, config), 3, 'painted count');
+  assertEqual(calls.length, 3, 'fillText count');
+  assertEqual(calls.join(','), '品牌,@账号,2026.11', 'paint order');
+});
+
+check('watermark drawing is safe on an unreadable canvas', () => {
+  const { ctx, calls } = fakeContext({ throwOnRead: true });
+  const config = Watermark.normalize({ template: 'handle', layers: [{ text: '@净帧' }] });
+  assertEqual(Watermark.draw(ctx, 1080, 1440, config), 1, 'one layer');
+  assertEqual(calls[0], '@净帧', 'text still drawn');
+});
+
+check('tiled drawing survives an unreadable canvas too', () => {
+  const { ctx, calls } = fakeContext({ throwOnRead: true });
+  const config = Watermark.stateFromTemplate('guard');
+  config.layers[0].text = 'X';
+  Watermark.draw(ctx, 1080, 1440, config);
+  assert(calls.length > 20, `tiled repeat count ${calls.length}`);
 });
 
 check('dark ink is chosen over a bright background', () => {
-  const fills = [];
-  const context = {
-    font: '',
-    textAlign: '',
-    textBaseline: '',
-    globalAlpha: 1,
-    fillStyle: '',
-    shadowColor: '',
-    shadowBlur: 0,
-    shadowOffsetX: 0,
-    shadowOffsetY: 0,
-    measureText: () => ({ width: 100 }),
-    save: () => {},
-    restore: () => {},
-    fillText: () => fills.push(context.fillStyle),
-    getImageData: (x, y, w, h) => ({ data: new Uint8Array(w * h * 4).fill(250) }),
-  };
-  Watermark.draw(context, 1080, 1440, { template: 'handle', primary: 'x', color: 'auto' });
+  const { ctx, fills } = fakeContext({ luminance: 250 });
+  Watermark.draw(ctx, 1080, 1440, Watermark.normalize({ template: 'handle', layers: [{ text: 'x' }] }));
   assertEqual(fills[0], '#16171a', 'dark ink on bright pixels');
 });
 
 check('light ink is chosen over a dark background', () => {
-  const fills = [];
-  const context = {
-    font: '',
-    textAlign: '',
-    textBaseline: '',
-    globalAlpha: 1,
-    fillStyle: '',
-    shadowColor: '',
-    shadowBlur: 0,
-    shadowOffsetX: 0,
-    shadowOffsetY: 0,
-    measureText: () => ({ width: 100 }),
-    save: () => {},
-    restore: () => {},
-    fillText: () => fills.push(context.fillStyle),
-    getImageData: (x, y, w, h) => ({ data: new Uint8Array(w * h * 4).fill(12) }),
-  };
-  Watermark.draw(context, 1080, 1440, { template: 'handle', primary: 'x', color: 'auto' });
+  const { ctx, fills } = fakeContext({ luminance: 12 });
+  Watermark.draw(ctx, 1080, 1440, Watermark.normalize({ template: 'handle', layers: [{ text: 'x' }] }));
   assertEqual(fills[0], '#ffffff', 'white ink on dark pixels');
+});
+
+check('forced colour overrides the sampled luminance', () => {
+  const bright = fakeContext({ luminance: 250 });
+  const dark = Watermark.normalize({ template: 'handle', color: 'dark', layers: [{ text: 'x' }] });
+  Watermark.draw(bright.ctx, 1080, 1440, dark);
+  assertEqual(bright.fills[0], '#16171a', 'dark forced');
+
+  const dim = fakeContext({ luminance: 12 });
+  const light = Watermark.normalize({ template: 'handle', color: 'light', layers: [{ text: 'x' }] });
+  Watermark.draw(dim.ctx, 1080, 1440, light);
+  assertEqual(dim.fills[0], '#ffffff', 'light forced');
 });
 
 // --------------------------------------------------------- static compliance

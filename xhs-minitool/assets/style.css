@@ -563,6 +563,94 @@ a:focus {
   background: rgba(23, 24, 21, 0.07);
 }
 
+.layer-list {
+  margin-top: 10px;
+}
+
+.layer-card {
+  margin-top: 8px;
+  padding: 9px 10px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.layer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.layer-title {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.layer-remove {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.layer-remove:active {
+  color: #fff;
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.layer-text {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.layer-text:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.layer-text::placeholder {
+  color: #a7a89d;
+}
+
+.layer-text:disabled {
+  color: var(--muted);
+  background: rgba(23, 24, 21, 0.04);
+}
+
+.layer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+
+.layer-row .chip-row {
+  margin: -3px;
+}
+
+.ghost-button.is-wide {
+  width: 100%;
+  margin-top: 9px;
+  height: 38px;
+}
+
 .field {
   margin-top: 10px;
 }

@@ -71,23 +71,16 @@
 
         <section class="watermark-card" id="watermarkCard" hidden>
           <div class="section-title">
-            <h2>水印模板</h2>
+            <h2>水印</h2>
             <span class="watermark-badge" id="watermarkBadge">未填写</span>
           </div>
           <div class="chip-row" id="templateChips" role="group" aria-label="水印模板"></div>
 
-          <div class="field" id="primaryField">
-            <label for="primaryInput">主文字</label>
-            <input id="primaryInput" type="text" maxlength="28" autocomplete="off" spellcheck="false" placeholder="@你的小红书号" />
-          </div>
-          <div class="field" id="secondaryField" hidden>
-            <label for="secondaryInput">副文字</label>
-            <input id="secondaryInput" type="text" maxlength="28" autocomplete="off" spellcheck="false" placeholder="日期或地点" />
-          </div>
-          <div class="field" id="positionField">
-            <span class="field-label" id="positionLabel">位置</span>
-            <div class="chip-row is-compact" id="positionChips" role="group" aria-labelledby="positionLabel"></div>
-          </div>
+          <div class="layer-list" id="layerList"></div>
+          <p class="empty-hint" id="layerHint" hidden>当前不加水印，选个模板或自己加一层。</p>
+
+          <button id="addLayerButton" class="ghost-button is-wide" type="button">＋ 加一层</button>
+
           <div class="field" id="colorField">
             <span class="field-label" id="colorLabel">颜色</span>
             <div class="chip-row is-compact" id="colorChips" role="group" aria-labelledby="colorLabel"></div>

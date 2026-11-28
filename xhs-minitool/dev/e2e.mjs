@@ -524,15 +524,16 @@ async function main() {
     check('save explains the missing container', /小红书小工具/.test(toast), toast);
 
     // ---------------------------------------------------------- watermark
-    const cornerSum = () =>
+    const regionSum = (x, y, w, h) =>
       evaluate(`(function(){
         var canvas = document.getElementById('previewCanvas');
-        var ctx = canvas.getContext('2d');
-        var d = ctx.getImageData(canvas.width - 200, canvas.height - 90, 200, 90).data;
+        var d = canvas.getContext('2d').getImageData(${x}, ${y}, ${w}, ${h}).data;
         var sum = 0;
         for (var i = 0; i < d.length; i += 4) sum += d[i] + d[i+1] + d[i+2];
         return sum;
       })()`);
+    const cornerSum = () => regionSum('canvas.width - 200', 'canvas.height - 90', 200, 90);
+    const centerSum = () => regionSum('Math.round(canvas.width / 2) - 100', 'Math.round(canvas.height / 2) - 60', 200, 120);
 
     const item = () => evaluate('JSON.parse(JSON.stringify(window.CleanFrameXhs.state.items[window.CleanFrameXhs.state.current]))');
 
@@ -541,10 +542,13 @@ async function main() {
       (await evaluate(`document.getElementById('watermarkCard').hidden`)) === false
     );
 
+    const layerTextCount = () => evaluate(`document.querySelectorAll('#layerList .layer-text').length`);
+    check('one editable layer is shown for the default template', (await layerTextCount()) === 1, String(await layerTextCount()));
+
     const versionBefore = (await state()).watermarkVersion;
 
     await evaluate(`(function(){
-      var input = document.getElementById('primaryInput');
+      var input = document.querySelector('#layerList .layer-text');
       input.value = '@净帧测试号';
       input.dispatchEvent(new Event('input', { bubbles: true }));
       return true;
@@ -555,7 +559,7 @@ async function main() {
       const current = snapshot.items[snapshot.current];
       return (
         snapshot.watermarkVersion > versionBefore &&
-        snapshot.watermark.primary === '@净帧测试号' &&
+        snapshot.watermark.layers[0].text === '@净帧测试号' &&
         current.output &&
         current.output.version === snapshot.watermarkVersion
       );
@@ -595,6 +599,75 @@ async function main() {
     });
     const travelItem = await item();
     check('switching template re-renders the current item', !!travelItem.output, JSON.stringify(travelItem));
+
+    // Tiled watermark: the mid-frame must change, not just a corner.
+    const centerWithout = await centerSum();
+    const versionBeforeGuard = (await state()).watermarkVersion;
+    await evaluate(`document.querySelector('#templateChips .chip[data-value="guard"]').click()`);
+    await waitFor('tiled template', async () => {
+      const snapshot = await state();
+      const current = snapshot.items[snapshot.current];
+      return (
+        snapshot.watermarkVersion > versionBeforeGuard &&
+        snapshot.watermark.template === 'guard' &&
+        snapshot.watermark.layers[0].tile === true &&
+        current.output &&
+        current.output.version === snapshot.watermarkVersion
+      );
+    });
+    const centerWithTile = await centerSum();
+    check(
+      'tiled watermark covers the middle of the frame',
+      Math.abs(centerWithTile - centerWithout) > 500,
+      JSON.stringify({ centerWithout, centerWithTile })
+    );
+    const tiledPng = await evaluate(`document.getElementById('previewCanvas').toDataURL('image/png')`);
+    await writeFile(join(outDir, 'e2e-watermark-tiled.png'), Buffer.from(tiledPng.split(',')[1], 'base64'));
+
+    // Up to three layers, then the add button locks.
+    const versionBeforeLayers = (await state()).watermarkVersion;
+    await evaluate(`document.getElementById('addLayerButton').click()`);
+    await sleep(120);
+    await evaluate(`document.getElementById('addLayerButton').click()`);
+    await sleep(200);
+    const layered = await evaluate(`(function(){
+      var snapshot = window.CleanFrameXhs.state;
+      return {
+        layers: snapshot.watermark.layers.length,
+        inputs: document.querySelectorAll('#layerList .layer-text').length,
+        addDisabled: document.getElementById('addLayerButton').disabled,
+        versionBumped: snapshot.watermarkVersion > ${versionBeforeLayers}
+      };
+    })()`);
+    check('three layers can be added', layered.layers === 3 && layered.inputs === 3, JSON.stringify(layered));
+    check('the add button locks at three layers', layered.addDisabled === true, JSON.stringify(layered));
+
+    // Type into the second layer and confirm all layers reach the pixels.
+    await evaluate(`(function(){
+      var inputs = document.querySelectorAll('#layerList .layer-text');
+      inputs[1].value = '第二层';
+      inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    })()`);
+    const versionBeforeMulti = (await state()).watermarkVersion;
+    await evaluate(`document.querySelector('#templateChips .chip[data-value="travel"]').click()`);
+    await waitFor('travel restored', async () => {
+      const snapshot = await state();
+      const current = snapshot.items[snapshot.current];
+      return (
+        snapshot.watermark.layers.length === 2 &&
+        snapshot.watermark.template === 'travel' &&
+        snapshot.watermarkVersion > versionBeforeMulti &&
+        current.output &&
+        current.output.version === snapshot.watermarkVersion
+      );
+    });
+    const restored = await state();
+    check(
+      'picking a template replaces the layer list',
+      restored.watermark.layers.length === 2 && restored.watermarkCustom === false,
+      JSON.stringify({ layers: restored.watermark.layers.length, custom: restored.watermarkCustom })
+    );
 
     // Regression for the dead-end: after a watermark change the other items are
     // stale, and save/publish used to be disabled until a manual re-clean, which
@@ -729,23 +802,33 @@ async function main() {
     await sleep(150);
     const duringSave = await evaluate(`({
       busy: window.CleanFrameXhs.state.busy,
-      inputDisabled: document.getElementById('primaryInput').disabled,
-      chipDisabled: document.querySelector('#templateChips .chip').disabled
+      inputDisabled: document.querySelector('#layerList .layer-text').disabled,
+      chipDisabled: document.querySelector('#templateChips .chip').disabled,
+      addDisabled: document.getElementById('addLayerButton').disabled
     })`);
     check(
       'watermark controls are disabled while saving',
-      duringSave.busy && duringSave.inputDisabled && duringSave.chipDisabled,
+      duringSave.busy && duringSave.inputDisabled && duringSave.chipDisabled && duringSave.addDisabled,
       JSON.stringify(duringSave)
     );
+
+    // Even a programmatic edit during the busy window must not reach state.
+    const textBeforeBusyEdit = await evaluate(`window.CleanFrameXhs.state.watermark.layers[0].text`);
+    await evaluate(`(function(){
+      var input = document.querySelector('#layerList .layer-text');
+      input.value = '@保存中改水印';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    })()`);
 
     await waitFor('slow save finished', async () => (await state()).busy === false, 40000);
     const afterSave = await evaluate(`(function(){
       var snapshot = window.CleanFrameXhs.state;
       return {
-        inputDisabled: document.getElementById('primaryInput').disabled,
+        inputDisabled: document.querySelector('#layerList .layer-text').disabled,
         chipDisabled: document.querySelector('#templateChips .chip').disabled,
         saveDisabled: document.getElementById('saveButton').disabled,
-        primary: snapshot.watermark.primary
+        firstLayerText: snapshot.watermark.layers[0].text
       };
     })()`);
     check(
@@ -754,9 +837,9 @@ async function main() {
       JSON.stringify(afterSave)
     );
     check(
-      'the dropped edit never desynchronised the state',
-      afterSave.primary !== '@保存中改水印',
-      JSON.stringify(afterSave)
+      'an edit pushed during the busy window is ignored',
+      afterSave.firstLayerText === textBeforeBusyEdit,
+      JSON.stringify({ before: textBeforeBusyEdit, after: afterSave.firstLayerText })
     );
 
     // 5. Permission denial must produce an actionable message.
